@@ -1,63 +1,64 @@
-from collections import defaultdict, deque
+def parse_input(input_data):
+    rules = []
+    updates = []
+    is_rules_section = True
 
-
-def parse_input(file_path):
-    with open(file_path, 'r') as f:
-        content = f.read().strip()
-
-    sections = content.split("\n\n")
-    rules = [tuple(map(int, line.split("|")))
-             for line in sections[0].splitlines()]
-    updates = [list(map(int, line.split(",")))
-               for line in sections[1].splitlines()]
+    for line in input_data.strip().split('\n'):
+        if line == '':
+            is_rules_section = False
+            continue
+        if is_rules_section:
+            rules.append(tuple(map(int, line.split('|'))))
+        else:
+            updates.append(list(map(int, line.split(','))))
 
     return rules, updates
 
 
-def build_graph(rules, update):
-    graph = defaultdict(list)
-    in_degree = defaultdict(int)
-    update_set = set(update)
+def build_graph(rules):
+    from collections import defaultdict
 
+    graph = defaultdict(set)
     for x, y in rules:
-        if x in update_set and y in update_set:
-            graph[x].append(y)
-            in_degree[y] += 1
-            if x not in in_degree:
-                in_degree[x] = 0
+        graph[x].add(y)
 
-    return graph, in_degree
+    return graph
 
 
-def is_valid_order(graph, in_degree, update):
-    queue = deque([node for node in update if in_degree[node] == 0])
-    sorted_order = []
+def is_ordered(update, graph):
+    index_map = {page: i for i, page in enumerate(update)}
 
-    while queue:
-        current = queue.popleft()
-        sorted_order.append(current)
-        for neighbor in graph[current]:
-            in_degree[neighbor] -= 1
-            if in_degree[neighbor] == 0:
-                queue.append(neighbor)
-
-    return len(sorted_order) == len(update), sorted_order
+    for x in graph:
+        for y in graph[x]:
+            if x in index_map and y in index_map:
+                if index_map[x] > index_map[y]:
+                    return False
+    return True
 
 
-def solve(file_path):
-    rules, updates = parse_input(file_path)
-    total_middle_sum = 0
+def find_middle_page(update):
+    n = len(update)
+    return update[n // 2]
+
+
+def main(file_path):
+    with open(file_path, 'r') as file:
+        input_data = file.read()
+
+    rules, updates = parse_input(input_data)
+    graph = build_graph(rules)
+
+    total_middle_pages = 0
 
     for update in updates:
-        graph, in_degree = build_graph(rules, update)
-        valid, sorted_order = is_valid_order(graph, in_degree, update)
-        if valid:
-            middle_page = sorted_order[len(sorted_order) // 2]
-            total_middle_sum += middle_page
+        if is_ordered(update, graph):
+            middle_page = find_middle_page(update)
+            total_middle_pages += middle_page
 
-    return total_middle_sum
+    return total_middle_pages
 
 
-file_path = "input1.txt"
-result = solve(file_path)
+file_path = 'input1.txt'
+
+result = main(file_path)
 print(result)
